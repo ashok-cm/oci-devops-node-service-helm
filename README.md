@@ -1,8 +1,8 @@
-# Getting Started with OCI DevOps
+# Getting Started Helm-based Deployments with OCI DevOps
 
-This is an example project using Node.js with the Express [getting started generator](https://expressjs.com/en/starter/generator.html). With the [OCI DevOps service](https://www.oracle.com/devops/devops-service/) and this project, you'll be able to build, test and deploy this application to Oracle Container Engine for Kubernetes (OKE).
+This is an example project using Node.js with the Express [getting started generator](https://expressjs.com/en/starter/generator.html). With the [OCI DevOps service](https://www.oracle.com/devops/devops-service/) and this project, you'll be able to build, test and deploy this application to Oracle Container Engine for Kubernetes (OKE) via Helm Charts.
 
-In this example, you'll build a container image of this Express getting started app, and deploy your built container to the OCI Container Registry, then deploy the getting started app to Oracle Container Engine for Kubernetes (OKE) all using the OCI DevOps service!
+In this example, you'll build a container image of this Node Express Getting Started App, and deploy your built container to the OCI Container Registry, then deploy the getting started app to Oracle Container Engine for Kubernetes (OKE) all using the OCI DevOps service!
 
 Let's go!
 
@@ -71,7 +71,7 @@ In your Build Pipeline, first add a Managed Build stage
 ## Create a Container Registry repository
 
 Create a [Container Registry repository](https://docs.oracle.com/en-us/iaas/Content/Registry/Tasks/registrycreatingarepository.htm) for the `node-express-getting-started` container image built in the Managed Build stage. 
-1. You can name the repo: `node-express-getting-started`. So if you create the repository in the Ashburn region, the path is iad.ocir.io/TENANCY-NAMESPACE/node-express-getting-started
+1. You can name the repo: `node-service`. So if you create the repository in the Ashburn region, the path is iad.ocir.io/TENANCY-NAMESPACE/node-express-getting-started
 1. Set the repostiory access to public so that you can pull the container image without authorization, from OKE. Under "Actions", choose `Change to public`.
 
 
@@ -82,7 +82,7 @@ The version of the container image that will be delivered to the OCI repository 
 Create a DevOps Artifact to point to the Container Registry repository location you just created above. Enter the information for the Artifact location:
 1. Name: node-express-getting-started container
 1. Type: Container image repository
-1. Path: `iad.ocir.io/TENANCY-NAMESPACE/node-express-getting-started`
+1. Path: `iad.ocir.io/TENANCY-NAMESPACE/node-service`
 1. Replace parameters: Yes
 
 Next, you'll set the container image tag to use the the Managed Build stage `exportedVariables:` name for the version of the container image to deliver in a run of a build pipeline. In the build_spec.yaml for this project, the variable name is: `BUILDRUN_HASH`
@@ -92,15 +92,36 @@ Next, you'll set the container image tag to use the the Managed Build stage `exp
 ```
 
 Edit the DevOps Artifact path to add the tag value as a parameter name.
-1. Path: `iad.ocir.io/TENANCY-NAMESPACE/node-express-getting-started:${BUILDRUN_HASH}`
+1. Path: `iad.ocir.io/TENANCY-NAMESPACE/node-service:${BUILDRUN_HASH}`
 
-### Edit your k8s manifest to refer to the container location
+### Override values.yaml
 
-Now that you've created a Container Registry repo, edit the [`gettingstarted-manifest.yaml`](gettingstarted-manifest.yaml) image path to match the repo you just created, e.g. `iad.ocir.io/TENANCY-NAMESPACE/node-express-getting-started:${BUILDRUN_HASH}`
+Default `values.yaml` is found in `/helm` folder. But `values.yaml` can be overridden by creating Artifact in DevOps Project. 
+1. Goto `Artifacts` in your DevOps Project.
+2. Click on `Add Artifact` and enter Name as `values.yaml`, Type as `General artifact`, Artifact Source as `Inline`, value as content give below. 
+
+```
+replicaCount: 3
+
+service:
+  type: LoadBalancer
+  port: 80
+
+image:
+  repository: iad.ocir.io/TENANCY-NAMESPACE/node-service
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ${BUILDRUN_HASH}
+```
+3. Save the artifact.
+
+**Note:**
+* This values.yaml changes replicaCount to `3` from `1` and makes the service as `LoadBalancer` for public IP Address to get assigned. 
+* Replace `TENANCY-NAMESPACE` with your valid tenancy name.
 
 ## Add a Deliver Artifacts stage
 
-Let's add a **Deliver Artifacts** stage to your Build Pipeline to deliver the `node-express-getting-started` container to an OCI repository. 
+Let's add a **Deliver Artifacts** stage to your Build Pipeline to deliver the `node-service` container to an OCI repository. 
 
 The Deliver Artifacts stage **maps** the ouput Artifacts from the Managed Build stage with the version to deliver to a DevOps Artifact resource, and then to the OCI repository.
 
@@ -109,6 +130,15 @@ Add a **Deliver Artifacts** stage to your Build Pipeline after the **Managed Bui
 1. From the list of artifacts select the `node-express-getting-started container` artifact that you created above
 1. In the next section, you'll assign the  container image outputArtifact from the `build_spec.yaml` to the DevOps project artifact. For the "Build config/result Artifact name" enter: `output01`
 
+## Configure Build Parameters
+
+`build_spec.yaml` takes care of running build and pushing helm charts to the OCIR repository. For publishing helm charts to OCIR, the credentials and OCIR path are sent as parameters. Under `Parameters` tab create below parameters with appropriate valid values.
+
+| Parameter      | Description| Sample  |
+| -----------    | ---------- | --------|
+| USER_AUTH_TOKEN      | Auth token of the user who has access to OCIR. Refer [documentation](https://docs.oracle.com/en-us/iaas/Content/Registry/Tasks/registrygettingauthtoken.htm) to create token.   | |
+| HELM_REPO_USER   | User name to publish helm package to OCIR        | <TENANCY_NAME>/<USER_NAME> |
+| HELM_REPO_URL | OCIR helm repository URL | oci://iad.ocir.io/<TENANCY_NAME>/node-service-helm-repo |
 
 # Run your Build in OCI DevOps
 
