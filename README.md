@@ -139,6 +139,7 @@ Add a **Deliver Artifacts** stage to your Build Pipeline after the **Managed Bui
 | USER_AUTH_TOKEN      | Auth token of the user who has access to OCIR. Refer [documentation](https://docs.oracle.com/en-us/iaas/Content/Registry/Tasks/registrygettingauthtoken.htm) to create token.   | |
 | HELM_REPO_USER   | User name to publish helm package to OCIR        | <TENANCY_NAME>/<USER_NAME> |
 | HELM_REPO_URL | OCIR helm repository URL | oci://iad.ocir.io/<TENANCY_NAME>/node-service-helm-repo |
+| HELM_REPO | OCIR domain name | iad.ocir.io |
 
 # Run your Build in OCI DevOps
 
