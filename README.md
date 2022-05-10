@@ -74,6 +74,11 @@ Create a [Container Registry repository](https://docs.oracle.com/en-us/iaas/Cont
 1. You can name the repo: `node-service`. So if you create the repository in the Ashburn region, the path is iad.ocir.io/TENANCY-NAMESPACE/node-express-getting-started
 1. Set the repostiory access to public so that you can pull the container image without authorization, from OKE. Under "Actions", choose `Change to public`.
 
+## Create a Container Registry Helm Repository
+
+Create a [Container Registry repository](https://docs.oracle.com/en-us/iaas/Content/Registry/Tasks/registrycreatingarepository.htm) for the `helm-repo` container image built in the Managed Build stage. 
+1. You can name the repo: `helm-repo`. So if you create the repository in the Ashburn region, the path is iad.ocir.io/TENANCY-NAMESPACE/node-service-helm-repo
+1. Set the repostiory access to public so that you can pull the container image without authorization, from OKE. Under "Actions", choose `Change to public`.
 
 ## Create a DevOps Artifact for your container image repository
 
@@ -93,6 +98,12 @@ Next, you'll set the container image tag to use the the Managed Build stage `exp
 
 Edit the DevOps Artifact path to add the tag value as a parameter name.
 1. Path: `iad.ocir.io/TENANCY-NAMESPACE/node-service:${BUILDRUN_HASH}`
+
+Now create DevOps Artifact for `helm-repo` too.
+1. Name: `node-service-helm`
+2. Type: `Helm Chart`
+3. Helm Chart URL: `oci://iad.ocir.io/TENANCY-NAMESPACE/helm-repo/node-service`
+4. Version: `0.1.0-${BUILDRUN_HASH}`
 
 ### Override values.yaml
 
@@ -171,34 +182,16 @@ Because the K8s manifest doesn't change each build, we're just going to create a
 
 1. Create an [Enivornment](https://docs.oracle.com/en-us/iaas/Content/devops/using/create_oke_environment.htm) to point to your OKE cluster destination for this example. You will already need to have an OKE cluster created, or go through the [Reference Architecture automated setup](https://docs.oracle.com/en/solutions/build-pipeline-using-devops/index.html).
 
-### Create the K8s manifest in the Artifact Registry
-
-1. Create a new, or use an existing [Artifact Registry repository]()
-1. Upload the sample k8s resources manifest to your new repository
-    1. Name this artifact: `web-app-manifest.yaml`
-    1. Specify a version, ie: `1.0`. You won't change this in the example
-    1. From your upload choice (Console, Cloud Shell, or CLI) choose the included manifest in this repo: [`gettingstarted-manifest.yaml`](gettingstarted-manifest.yaml)
-1. Now create a [DevOps Artifact](https://docs.oracle.com/en-us/iaas/Content/devops/using/artifact_registry_artifact.htm) to point to your Artifact Registry repository file
-    1. Select Type: "Kubernetes manifest" so that you can use this artifact in your Deployment pipeline stage.
-    1. Select `Artifact Registry repository` as the Artifact source
-    1. Select the Artifact Registory repository that you just created
-    1. For the Artifact location, choose `Select Existing Location` and select the file and version: `web-app-manifest.yaml:1.0` that you just uploaded above
-    1. Save!
-
 ## Create your Deployment Pipeline
 
 You've created the references to your OKE cluster and manifest to deploy, now create your [Deployment Pipeline](https://docs.oracle.com/en-us/iaas/Content/devops/using/deployment_pipelines.htm)
 1. Create a new Deployment Pipeline
-1. Add your first stage - choose the type to release to OKE: `Apply manifest to your Kubernetes cluster`
+1. Add your first stage - choose the type to deploy helm to OKE: `Install helm chart to Kubernetes Cluster`
+    1. Add stage name
     1. Choose the Environment that you created above
-    1. For Select Artifact, select the Kubernetes manifest DevOps artifact that points to `web-app-manifest.yaml`
+    1. For Select Artifact, select the Helm Chart DevOps artifact that points to `node-service-helm`
+    1. For Select values artifacts, select values.yaml DevOps artifact that points to `values.yaml`
     1. Add
-1. Add the pipeline parameters needed by the K8s manifest: `${namespace}`
-    1. From the Parameters tab, add new values:
-       - Name: `namespace`
-       - Default value: whatever you want here: `devops-sample-app`
-       - Description: namespace value needed by the k8s manifest
-    1. Smash that "+" button
 
 To run this pipeline on its own, you can add a parameter for `BUILDRUN_HASH` or, trigger it from the Build Pipeline which will forward the `build_spec.yaml` exported variables to the Deployment Pipeline.
 
