@@ -90,7 +90,7 @@ steps:
       helm push *.tgz ${HELM_REPO_URL}
 
 outputArtifacts:
-  - name: output01
+  - name: APPLICATION_DOCKER_IMAGE
     type: DOCKER_IMAGE
     # this location tag doesn't effect the tag used to deliver the container image
     # to the Container Registry
